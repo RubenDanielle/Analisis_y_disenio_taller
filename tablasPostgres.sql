@@ -1,11 +1,10 @@
-CREATE SCHEMA ejercicio2anio2021;
-
 set search_path = "plataforma_ed_a dist";
 
+drop domain if exists tipo_dedicacion cascade;
 create domain tipo_dedicacion as varchar(15)
 	check (value in('EXCLUSIVO','SEMI-EXCLUSIVO','SIMPLE'));
 
-drop table if exists persona;
+drop table if exists persona cascade;
 create table persona (
 	dni integer not null,
 	nombre varchar(20) not null,
@@ -24,7 +23,7 @@ create table telefono (
 		on update no action
 );
 
-drop table if exists docente;
+drop table if exists docente cascade;
 create table docente(
 	dni_docente integer not null,
 	dedicacion tipo_dedicacion not null,
@@ -34,7 +33,7 @@ create table docente(
 		on update no action
 );
 
-drop table if exists materia;
+drop table if exists materia cascade;
 create table materia (
 	cod_materia integer not null,
 	nombre varchar(100) not null,
@@ -42,11 +41,10 @@ create table materia (
 	constraint pk_cod primary key (cod_materia),
 	constraint fk_dni_docente_resp foreign key (dni_docente_responsable) references docente(dni_docente)
 		on delete cascade 
-		on update no action,
-	constraint check_docente_resp_no_equipo check (dni_docente_responsable, cod_materia not in docente_asignado)
+		on update no action
 );
 
-drop table if exists actividad;
+drop table if exists actividad cascade;
 create table actividad (
 	cod_actividad integer not null,
 	descripcion varchar(100),
@@ -57,7 +55,7 @@ create table actividad (
 		on update cascade
 );
 
-drop table if exists resolucion;
+drop table if exists resolucion cascade;
 create table resolucion (
 	cod_resol integer not null,
 	cod_act integer not null,
@@ -74,7 +72,7 @@ create table resolucion (
 		 
 );
 
-drop table if exists alumno;
+drop table if exists alumno cascade;
 create table alumno (
 	nro_alumno integer not null,
 	dni_alumno integer not null,
@@ -89,14 +87,14 @@ create table alumno (
 		on update cascade
 );
 
-drop table if exists cargo;
+drop table if exists cargo cascade;
 create table cargo (
 	cod_cargo integer not null,
 	descripcion varchar(100) not null,
 	constraint pk_cod_cargo primary key(cod_cargo)
 );
 
-drop table if exists facultad;
+drop table if exists facultad cascade;
 create table facultad (
 	cod_fac integer not null,
 	descripcion varchar(100) not null,
@@ -115,6 +113,14 @@ create table realiza (
 		on delete cascade
 		on update cascade
  );
+ 
+create or replace function responsableEnEquipo(doc_equipo integer, materia_de_equipo integer) returns bool as $$
+	select exists (
+		select true from materia where 
+		materia.dni_docente_responsable = doc_equipo 
+		and
+		materia.cod_materia = materia_de_equipo);
+$$ language sql;
 
 drop table if exists docente_asignado;
 create table docente_asignado (
@@ -125,7 +131,8 @@ create table docente_asignado (
 		on update cascade,
 	constraint fk_dni_docente_asignado foreign key (dni_docente_asignado) references docente(dni_docente)
 		on delete cascade
-		on update no action
+		on update no action,
+	constraint check_doc_resp_no_equipo check (responsableEnEquipo(dni_docente_asignado, cod_mat) = false)
 );
 
 
@@ -135,7 +142,7 @@ create table pertenece (
 	codigo_fac integer not null,
 	codigo_cargo integer not null,
 	constraint fk_cod_cargo foreign key (codigo_cargo) references cargo(cod_cargo)
-		on delete cascade
+        on delete cascade
 		on update cascade,
 	constraint fk_cod_fac foreign key (codigo_fac) references facultad(cod_fac)
 		on delete cascade
@@ -161,6 +168,6 @@ create or replace function cambio_calif() returns trigger as $cambio_calif$
 	end;
 	$cambio_calif$ language plpgsql; 
 	
-create trigger cambio_calif after update on resolucion.nota
+create trigger cambio_calif after update of nota on resolucion
 	for each row execute procedure cambio_calif();
 

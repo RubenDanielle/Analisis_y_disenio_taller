@@ -1,3 +1,5 @@
+create schema if not exists "plataforma_ed_a dist";
+
 set search_path = "plataforma_ed_a dist";
 
 drop domain if exists tipo_dedicacion cascade;
@@ -17,7 +19,8 @@ create table persona (
 drop table if exists telefono;
 create table telefono (
 	dni_persona integer not null,
-	telefono integer not null,
+	telefono numeric not null,
+	constraint pk_telefono_dni primary key (dni_persona, telefono),
 	constraint fk_dni foreign key (dni_persona) references persona(dni)
 		on delete cascade 
 		on update no action
@@ -59,12 +62,17 @@ drop table if exists resolucion cascade;
 create table resolucion (
 	cod_resol integer not null,
 	cod_act integer not null,
+	fecha_y_hs_entrega TimeStamp not null,
+	dni_alumno_entrego integer not null,
 	dni_docente_califica integer,
 	nota float4 not null,
 	constraint pk_cod_resol primary key (cod_resol),
 	constraint fk_cod_act foreign key (cod_act) references actividad(cod_actividad)
 		on delete cascade
 		on update cascade,
+	constraint fk_dni_alumno_entrego foreign key (dni_alumno_entrego) references alumno(dni_alumno)
+		on delete cascade
+		on update no action,
 	constraint fk_dni_docente_calif foreign key (dni_docente_califica) references docente(dni_docente)
 		on delete set null
 		on update no action,
@@ -74,17 +82,12 @@ create table resolucion (
 
 drop table if exists alumno cascade;
 create table alumno (
-	nro_alumno integer not null,
+	nro_alumno integer not null unique,
 	dni_alumno integer not null,
-	cod_resolucion integer,
-	fecha_y_hs_entrega TimeStamp not null,
 	constraint pk_dni_alum primary key (dni_alumno),
 	constraint fk_dniA foreign key (dni_alumno) references persona(dni)
 		on delete cascade
-		on update no action,
-	constraint fk_cod_resolucion foreign key (cod_resolucion) references resolucion(cod_resol)
-		on delete set null
-		on update cascade
+		on update no action
 );
 
 drop table if exists cargo cascade;
@@ -101,6 +104,22 @@ create table facultad (
 	constraint pk_cod_fac primary key (cod_fac)
 );
 
+create or replace function alumnoResponsableDeMateria(dniAlumno integer, codMateria integer) returns boolean as $$
+	select exists (
+		select true from materia where 
+			materia.dni_docente_responsable = dniAlumno 
+			and
+			materia.cod_materia = codMateria);
+$$ language sql;
+
+create or replace function alumnoEquipoDeMateria(dniAlumno integer, codMateria integer) returns boolean as $$
+	select exists (
+		select true from docente_asignado where 
+			docente_asignado.dni_docente_asignado = dniAlumno 
+			and
+			docente_asignado.cod_mat = codMateria);
+$$ language sql;
+
 drop table if exists realiza;
 create table realiza (
 	dni_alumno_cursa integer not null,
@@ -111,7 +130,12 @@ create table realiza (
 		on update no action,
 	constraint fk_cod_materia_cursada foreign key (cod_materia_cursada) references materia(cod_materia)
 		on delete cascade
-		on update cascade
+		on update cascade,
+	constraint alumno_no_docente_de_materia check(
+		alumnoResponsableDeMateria(dni_alumno_cursa, cod_materia_cursada) = false
+		and 
+		alumnoEquipoDeMateria(dni_alumno_cursa, cod_materia_cursada) = false
+	)
  );
  
 create or replace function responsableEnEquipo(doc_equipo integer, materia_de_equipo integer) returns bool as $$
@@ -141,6 +165,7 @@ create table pertenece (
 	dni_docente_pert integer not null,
 	codigo_fac integer not null,
 	codigo_cargo integer not null,
+	constraint pk_pert_docente_fac primary key (dni_docente_pert, codigo_fac),
 	constraint fk_cod_cargo foreign key (codigo_cargo) references cargo(cod_cargo)
         on delete cascade
 		on update cascade,
@@ -158,7 +183,20 @@ create table cambio_calificacion_actividad (
 	fecha_cambio date not null,
 	calif_anterior float4 not null,
 	calif_nueva float4 not null,
-	usuario varchar(100)
+	usuario varchar(100) not null
+);
+
+drop table if exists valores_borrados_actualizados_materia;
+create table valores_borrados_actualizados_materia (
+	operacion_realizada char(6) not null,
+	cod_materia_cambiado integer not null,
+	nombre_cambiado varchar(100) not null,
+	dni_docente_responsable_cambiado integer not null,
+	cod_materia_nuevo integer,
+	nombre_nuevo varchar(100),
+	dni_docente_responsable_nuevo integer,
+	fecha_cambio date not null,
+	usuario varchar(100) not null
 );
 
 create or replace function cambio_calif() returns trigger as $cambio_calif$
@@ -170,4 +208,20 @@ create or replace function cambio_calif() returns trigger as $cambio_calif$
 	
 create trigger cambio_calif after update of nota on resolucion
 	for each row execute procedure cambio_calif();
+	
+create or replace function borradoLogicoMateria() returns trigger as $borradoLogicoMateria$
+	begin 
+		if (TG_OP = 'DELETE') then
+			insert into valores_borrados_actualizados_materia values (TG_OP, old.cod_materia, old.nombre, old.dni_docente_responsable, null, null, null, current_date, current_user);
+			return null;
+		elseif (TG_OP = 'UPDATE') then
+			insert into valores_borrados_actualizados_materia values (TG_OP, old.cod_materia, old.nombre, old.dni_docente_responsable, new.cod_materia, new.nombre, new.dni_docente_responsable, current_date, current_user);
+			return null;
+		end if;
+		return null;
+	end;
+$borradoLogicoMateria$ language plpgsql; 
+
+create trigger borradoLogicoMateria after delete or update on materia
+	for each row execute procedure borradoLogicoMateria();
 

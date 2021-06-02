@@ -150,6 +150,7 @@ drop table if exists docente_asignado;
 create table docente_asignado (
 	cod_mat integer not null,
 	dni_docente_asignado integer not null,
+	constraint pk_docente_asignado primary key (cod_mat, dni_docente_asignado),
 	constraint fk_cod_mat foreign key (cod_mat) references materia(cod_materia)
 		on delete cascade
 		on update cascade,

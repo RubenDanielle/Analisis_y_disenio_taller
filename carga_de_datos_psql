@@ -34,7 +34,6 @@ insert into materia values
 	
 insert into docente_asignado values
 	(1034, 35657611),
-	(3925, 38450736),
 	(4006, 29636190);
 	
 		

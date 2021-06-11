@@ -26,6 +26,16 @@ create table telefono (
 		on update no action
 );
 
+drop table if exists alumno cascade;
+create table alumno (
+	nro_alumno integer not null unique,
+	dni_alumno integer not null,
+	constraint pk_dni_alum primary key (dni_alumno),
+	constraint fk_dniA foreign key (dni_alumno) references persona(dni)
+		on delete cascade
+		on update no action
+);
+
 drop table if exists docente cascade;
 create table docente(
 	dni_docente integer not null,
@@ -47,6 +57,29 @@ create table materia (
 		on update no action
 );
 
+create or replace function responsableEnEquipo(doc_equipo integer, materia_de_equipo integer) returns bool as $$
+	select exists (
+		select true from materia where 
+		materia.dni_docente_responsable = doc_equipo 
+		and
+		materia.cod_materia = materia_de_equipo);
+$$ language sql;
+
+drop table if exists docente_asignado;
+create table docente_asignado (
+	cod_mat integer not null,
+	dni_docente_asignado integer not null,
+	constraint pk_docente_asignado primary key (cod_mat, dni_docente_asignado),
+	constraint fk_cod_mat foreign key (cod_mat) references materia(cod_materia)
+		on delete cascade
+		on update cascade,
+	constraint fk_dni_docente_asignado foreign key (dni_docente_asignado) references docente(dni_docente)
+		on delete cascade
+		on update no action,
+	constraint check_doc_resp_no_equipo check (responsableEnEquipo(dni_docente_asignado, cod_mat) = false)
+);
+
+
 drop table if exists actividad cascade;
 create table actividad (
 	cod_actividad integer not null,
@@ -58,6 +91,7 @@ create table actividad (
 		on update cascade
 );
 
+
 drop table if exists resolucion cascade;
 create table resolucion (
 	cod_resol integer not null,
@@ -67,6 +101,7 @@ create table resolucion (
 	dni_docente_califica integer,
 	nota float4 not null,
 	constraint pk_cod_resol primary key (cod_resol),
+	constraint actividad_alumno unique (dni_alumno_entrego, cod_act),
 	constraint fk_cod_act foreign key (cod_act) references actividad(cod_actividad)
 		on delete cascade
 		on update cascade,
@@ -78,16 +113,6 @@ create table resolucion (
 		on update no action,
 	constraint check_nota check (nota >= 0.00 and nota<=10.00)
 		 
-);
-
-drop table if exists alumno cascade;
-create table alumno (
-	nro_alumno integer not null unique,
-	dni_alumno integer not null,
-	constraint pk_dni_alum primary key (dni_alumno),
-	constraint fk_dniA foreign key (dni_alumno) references persona(dni)
-		on delete cascade
-		on update no action
 );
 
 drop table if exists cargo cascade;
@@ -138,27 +163,7 @@ create table realiza (
 	)
  );
  
-create or replace function responsableEnEquipo(doc_equipo integer, materia_de_equipo integer) returns bool as $$
-	select exists (
-		select true from materia where 
-		materia.dni_docente_responsable = doc_equipo 
-		and
-		materia.cod_materia = materia_de_equipo);
-$$ language sql;
 
-drop table if exists docente_asignado;
-create table docente_asignado (
-	cod_mat integer not null,
-	dni_docente_asignado integer not null,
-	constraint pk_docente_asignado primary key (cod_mat, dni_docente_asignado),
-	constraint fk_cod_mat foreign key (cod_mat) references materia(cod_materia)
-		on delete cascade
-		on update cascade,
-	constraint fk_dni_docente_asignado foreign key (dni_docente_asignado) references docente(dni_docente)
-		on delete cascade
-		on update no action,
-	constraint check_doc_resp_no_equipo check (responsableEnEquipo(dni_docente_asignado, cod_mat) = false)
-);
 
 
 drop table if exists pertenece;

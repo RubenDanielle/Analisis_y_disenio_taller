@@ -17,6 +17,11 @@ insert into telefono values
 	(48167520, 3583433323),
 	(35657611, 3385304050);
 	
+insert into alumno values
+	(1, 40613154),
+	(2, 48167520),
+	(3, 35657611);
+	
 insert into docente values
 	(29636190, 'EXCLUSIVO'),
 	(38450736, 'SEMI-EXCLUSIVO'),
@@ -26,6 +31,12 @@ insert into materia values
 	(1034, 'Introducción a la Algoritmica y Programación', 29636190),
 	(4006, 'Base de Datos', 38450736),
 	(3925, 'Algoritmos II', 35657611);
+	
+insert into docente_asignado values
+	(1034, 35657611),
+	(3925, 38450736),
+	(4006, 29636190);
+	
 		
 insert into actividad values
 	(1, 'Definir función', 1034),
@@ -42,10 +53,6 @@ insert into resolucion values
 	(3, 2, '2021-06-23 21:34:05.03', 40613154, 35657611, 1.60),
 	(4, 1, '2021-05-30 23:59:59.97', 40613154, 29636190, 9.99);
 
-insert into alumno values
-	(1, 40613154),
-	(2, 48167520),
-	(3, 35657611);
 	
 insert into cargo values
 	(1523, 'profesor tiempo completo'),
@@ -59,20 +66,15 @@ insert into facultad values
 	(2389, 'Facultad de Agronomía y Veterinaria');
 
 insert into realiza values
-	(35657611, 1034),
 	(35657611, 4006),
 	(48167520, 4006),
 	(48167520, 1034),
 	(40613154, 1034),
 	(40613154, 3925),
 	(40613154, 4006);
-	
-insert into docente_asignado values
-	(1034, 35657611),
-	(4006, 35657611),
-	(4006, 29636190);
-	
+
 insert into pertenece values
 	(29636190, 420, 1523),
 	(35657611, 420, 2398),
 	(38450736, 420, 3952);
+

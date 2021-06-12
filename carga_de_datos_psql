@@ -1,4 +1,4 @@
-set search_path = "plataforma_ed_a dist";	
+set search_path = "plataforma_ed_a_dist";	
 
 insert into persona values
 	(40613154, 'Bruno', 'Batista', 'Carrer Beatriz 09'),

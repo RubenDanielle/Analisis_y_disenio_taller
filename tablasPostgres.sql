@@ -1,6 +1,6 @@
-create schema if not exists "plataforma_ed_a dist";
+create schema if not exists "plataforma_ed_a_dist";
 
-set search_path = "plataforma_ed_a dist";
+set search_path = "plataforma_ed_a_dist";
 
 drop domain if exists tipo_dedicacion cascade;
 create domain tipo_dedicacion as varchar(15)
@@ -207,7 +207,7 @@ create table valores_borrados_actualizados_materia (
 
 create or replace function cambio_calif() returns trigger as $cambio_calif$
 	begin 
-		insert into cambio_calificacion_actividad values (old.cod_resol, current_date, old.nota, new.nota, current_user);
+		insert into plataforma_ed_a_dist.cambio_calificacion_actividad values (old.cod_resol, current_date, old.nota, new.nota, current_user);
 		return null;
 	end;
 	$cambio_calif$ language plpgsql; 
@@ -218,10 +218,12 @@ create trigger cambio_calif after update of nota on resolucion
 create or replace function borradoLogicoMateria() returns trigger as $borradoLogicoMateria$
 	begin 
 		if (TG_OP = 'DELETE') then
-			insert into valores_borrados_actualizados_materia values (TG_OP, old.cod_materia, old.nombre, old.dni_docente_responsable, null, null, null, current_date, current_user);
+			insert into plataforma_ed_a_dist.valores_borrados_actualizados_materia 
+				values (TG_OP, old.cod_materia, old.nombre, old.dni_docente_responsable, null, null, null, current_date, current_user);
 			return null;
 		elseif (TG_OP = 'UPDATE') then
-			insert into valores_borrados_actualizados_materia values (TG_OP, old.cod_materia, old.nombre, old.dni_docente_responsable, new.cod_materia, new.nombre, new.dni_docente_responsable, current_date, current_user);
+			insert into plataforma_ed_a_dist.valores_borrados_actualizados_materia 
+				values (TG_OP, old.cod_materia, old.nombre, old.dni_docente_responsable, new.cod_materia, new.nombre, new.dni_docente_responsable, current_date, current_user);
 			return null;
 		end if;
 		return null;
